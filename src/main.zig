@@ -20,16 +20,39 @@ pub fn main() !void {
     var buffered = std.io.bufferedReader(file.reader());
     const reader = buffered.reader();
 
-    const columns: u8 = 16;
-    var buffer: [columns]u8 = undefined;
-    while (true) {
-        const bytes = try reader.readAll(&buffer);
+    var buffer: [16]u8 = undefined;
+    var offset: u64 = 0;
 
-        const out = try zxd.zxd(allocator, &buffer);
+    while (true) {
+        //@memset(&buffer, 0);
+        const bytes = try reader.readAll(&buffer);
+        const out = try zxd.zxd(allocator, buffer[0..bytes]);
         defer allocator.free(out);
+
+        printf("{x:0>8}: {s}\n", .{ offset, out });
+
+        offset += bytes;
 
         if (bytes != buffer.len) {
             break;
         }
     }
+}
+
+pub fn printf(comptime format: []const u8, args: anytype) void {
+    const stdout = std.io.getStdOut().writer();
+    var bufferedWriter = std.io.bufferedWriter(stdout);
+    const writer = bufferedWriter.writer();
+
+    writer.print(format, args) catch {
+        bufferedWriter.flush() catch {
+            return;
+        };
+
+        return;
+    };
+
+    bufferedWriter.flush() catch {
+        return;
+    };
 }
